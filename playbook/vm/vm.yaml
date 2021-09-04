@@ -1,0 +1,135 @@
+- hosts: mint
+  gather_facts: no
+
+  vars_files:
+    - vars.yaml
+
+
+  tasks:
+  # -------------------  configure ssh server  ------------------- # 
+  - name: Configure sshd_config
+    become: true
+    copy:
+      src: ./artifacts/sshd_config
+      dest: /etc/ssh/sshd_config
+      owner: root
+      group: root
+      mode: '0644'
+      backup: yes
+    tags:
+      - ssh_config
+    notify:
+    - restart ssh
+    
+  # -------------------  Configure hostname  ------------------- # 
+  - name: Configure hostname
+    become: true
+    copy:
+      content: |
+        mint
+      dest: /etc/hostname
+      backup: yes
+    tags:
+      - pi_config
+      - hostname
+
+  # -------------------  Configure hosts  ------------------- # 
+  - name: Configure hosts
+    become: true
+    copy:
+      content: |
+        127.0.0.1	localhost mint
+        ::1		localhost ip6-localhost ip6-loopback
+        ff02::1		ip6-allnodes
+        ff02::2		ip6-allrouters
+      dest: /etc/hosts
+    tags:
+      - pi_config
+      - hosts
+
+
+  # -------------------  Docker  ------------------- # 
+  - name: Install Docker
+    become: true
+    shell: curl -sSL https://get.docker.com | sh
+    tags:
+      - docker
+      
+  # -------------------  Install packages  ------------------- # 
+  - name: Install packages
+    become: true
+    apt:
+      update_cache: yes
+      autoremove: yes
+      state: present
+      pkg:
+        - vim
+        - zulumount-cli
+        - vlc
+        - rclone
+        - screen
+        - encfs
+        - fish
+        - docker-compose
+    tags:
+      - install-pkgs
+
+# -------------------  Docker configuration  ------------------- # 
+      
+  - name: Add pi to docker group
+    become: true
+    shell: usermod -aG docker pi
+    tags:
+      - docker
+
+  - name: create directory for docker compose
+    file:
+      path: ~/docker
+      state: directory
+    tags:
+      - docker
+      - docker_compose
+
+  - name: copy docker-compose
+    template:
+      src: ./artifacts/docker-compose.yml.j2
+      dest: ~/docker/docker-compose.yml
+    tags:
+      - docker
+      - docker_compose
+
+  # ------------------- run syncthing container ------------------- # 
+  - name: Start syncthing container
+    shell: cd ~/docker && docker-compose up -d syncthing
+    tags:
+      - syncthing
+      - docker 
+
+
+  # ------------------- configure fish ------------------- # 
+  - name: set fish as default shell
+    become: true
+    shell: chsh -s /usr/bin/fish
+    tags:
+      - fish
+
+  - name: Create fish config dir
+    file:
+      dest: ~/.config/fish
+      state: directory
+    tags:
+      - fish
+
+  - name: Configure fish
+    copy:
+      dest: ~/.config/fish/config.fish
+      content: |
+        set -g -x fish_greeting 'This raspberry pi is a property of Poomalairaj. Unauthorized access is prohibited'
+    tags:
+      - fish
+
+  # ------------------- Handlers ------------------- # 
+  handlers:
+    - name: restart ssh
+      become: true
+      command: service ssh restart

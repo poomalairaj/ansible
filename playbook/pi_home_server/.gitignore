@@ -1,0 +1,5 @@
+vars.yaml
+artifacts/pi4.pem
+artifacts/pi4.pem.pub
+*.retry
+hosts

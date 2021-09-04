@@ -1,0 +1,10 @@
+---
+# variables
+
+zulu_device: '/dev/sda'
+transmission_incomplete_dir: /your/incomplete/dir
+transmission_download_dir: /your/download/dir
+transmission_rpc_username: pi
+transmission_rpc_whitelist: 192.168.1.*
+transmission_config_dir: /etc/transmission-daemon
+

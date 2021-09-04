@@ -1,0 +1,11 @@
+---
+# Install ssh key to pi
+- hosts: pi4-first-time
+  tasks:
+  - name: Add your authorized key on pi4
+    authorized_key:
+      user: pi
+      state: present
+      key: "{{ lookup('file', './artifacts/pi4.pem.pub') }}"
+    tags:
+      - install-ssh-key

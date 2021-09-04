@@ -1,0 +1,5 @@
+---
+# variables
+
+# syncthing_dir: /run/media/private/pi/hdd/sync/syncthing
+syncthing_dir: /home/pi/syncthing

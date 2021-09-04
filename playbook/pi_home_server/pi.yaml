@@ -1,0 +1,269 @@
+- hosts: pi4
+  gather_facts: no
+  vars_files:
+    - vars.yaml
+
+  # -------------------  Get necessary passwords  ------------------- # 
+  vars_prompt:
+    - name: zulu_password
+      prompt: 'Enter zulu password'
+
+    - name: transmission_rpc_password
+      prompt: 'Enter transmission password'
+
+  # -------------------  configure ssh server  ------------------- # 
+  tasks:
+  - name: Configure sshd_config
+    become: true
+    copy:
+      src: ./artifacts/sshd_config
+      dest: /etc/ssh/sshd_config
+      owner: root
+      group: root
+      mode: '0644'
+      backup: yes
+    tags:
+      - ssh_config
+    notify:
+    - restart ssh
+
+  # -------------------  Setup static ip  ------------------- # 
+  - name: configure static ip
+    become: true
+    template:
+      src: ./artifacts/dhcpcd.j2
+      dest: /etc/dhcpcd.conf
+      owner: root
+      group: root
+      mode: '0644'
+      backup: yes
+    tags:
+      - network
+      - static_ip
+
+  # -------------------  Configure hostname  ------------------- # 
+  - name: Configure hostname
+    become: true
+    copy:
+      content: |
+        pi4
+      dest: /etc/hostname
+      backup: yes
+    tags:
+      - pi_config
+
+  # -------------------  Configure hosts  ------------------- # 
+  - name: Configure hosts
+    become: true
+    template:
+      src: ./artifacts/hosts.j2
+      dest: /etc/hosts
+      backup: yes
+    tags:
+      - pi_config
+
+
+  # -------------------  Disable audio, wifi & bluetooth  ------------------- # 
+  - name: Disable wifi, bt & audio
+    become: true
+    copy:
+      content: |
+        dtparam=audio=off
+        dtoverlay=disable-wifi
+        dtoverlay=disable-bt
+        gpu_mem=16
+      dest: /boot/config.txt
+    tags:
+      - pi_config
+      
+
+
+  # -------------------  Docker  ------------------- # 
+  - name: Install Docker
+    become: true
+    shell: curl -sSL https://get.docker.com | sh
+    tags:
+      - docker
+      
+  # -------------------  Install packages  ------------------- # 
+  - name: Install packages
+    become: true
+    apt:
+      update_cache: yes
+      autoremove: yes
+      state: present
+      pkg:
+        - vim
+        - zulumount-cli
+        - rclone
+        - screen
+        - encfs
+        - samba
+        - transmission-daemon
+        - fish
+        - docker-compose
+    tags:
+      - install-pkgs
+
+
+  - name: Add pi to docker group
+    become: true
+    shell: usermod -aG docker pi
+    tags:
+      - docker
+
+  - name: create directory for docker compose
+    file:
+      path: ~/docker
+      state: directory
+    tags:
+      - docker
+      - docker_compose
+
+  - name: copy docker-compose
+    template:
+      src: ./artifacts/docker-compose.yml.j2
+      dest: ~/docker/docker-compose.yml
+    tags:
+      - docker
+      - docker_compose
+
+
+
+  # -------------------  Mount/Unmount veracrypt volume  ------------------- # 
+  - name: Mount zulu
+    become: true
+    shell: zuluMount-cli -K 1000 -m -d /dev/sda -z hdd -t vera -p "{{ zulu_password }}"
+    tags:
+      - zulu-mount
+
+  - name: Unmount zulu
+    become: true
+    shell: zuluMount-cli -K 1000 -u -d {{ zulu_device }}
+    tags:
+      - zulu-unmount
+
+  # ------------------- run syncthing container ------------------- # 
+  - name: Start syncthing container
+    shell: cd ~/docker && docker-compose up -d syncthing
+    tags:
+      - syncthing
+      - docker 
+
+
+  # -------------------  Configure transmission-daemon  ------------------- # 
+  - name: Stop transmission daemon
+    become: true
+    service:
+      name: transmission-daemon
+      state: stopped
+    tags:
+      - transmission
+
+  - name: Create transmission incomplete dir
+    become: true
+    file:
+      path: "{{ transmission_incomplete_dir }}"
+      state: directory
+      owner: pi
+      group: pi
+    tags:
+      - transmission
+             
+  - name: Configure transmission-daemon settings.json 
+    become: true
+    template:
+      src: artifacts/transmission-settings.j2
+      dest: /etc/transmission-daemon/settings.json
+    tags:
+      - transmission
+
+  - name: Configure transmission init.d
+    become: true
+    lineinfile:
+      path: /etc/init.d/transmission-daemon
+      regexp: '^USER='
+      line: USER=pi
+    tags:
+      - transmission
+
+  - name: Configure transmission service
+    become: true
+    lineinfile:
+      path: /etc/systemd/system/multi-user.target.wants/transmission-daemon.service
+      regexp: '^User='
+      line: User=pi
+    tags:
+      - transmission
+
+  - name: daemon reload
+    become: true
+    shell: systemctl daemon-reload
+    tags:
+      - transmission
+
+  - name: Change ownership of transmission config directory 
+    become: true
+    file:
+      path: "{{ transmission_config_dir }}"
+      state: directory
+      owner: pi
+      group: pi
+      recurse: yes
+    tags:
+      - transmission
+
+  - name: Create local config dir for tansmission
+    file:
+      path: ~/.config/transmission-daemon
+      state: directory
+      owner: pi
+      group: pi
+    tags:
+      - transmission
+
+  - name: create symlink of config 
+    file:
+      state: link
+      src: /etc/transmission-daemon/settings.json
+      dest: ~/.config/transmission-daemon/settings.json
+      owner: pi
+      group: pi
+    tags:
+      - transmission
+        
+  - name: Restart transmission daemon
+    become: true
+    service:
+      name: transmission-daemon
+      state: stopped 
+    tags:
+      - transmission
+
+  # ------------------- configure fish ------------------- # 
+  - name: set fish as default shell
+    become: true
+    shell: chsh -s /usr/bin/fish
+    tags:
+      - fish
+
+  - name: Create fish config dir
+    file:
+      dest: ~/.config/fish
+      state: directory
+    tags:
+      - fish
+
+  - name: Configure fish
+    copy:
+      dest: ~/.config/fish/config.fish
+      content: |
+        set -g -x fish_greeting 'This raspberry pi is a property of Poomalairaj. Unauthorized access is prohibited'
+    tags:
+      - fish
+
+  # ------------------- Handlers ------------------- # 
+  handlers:
+    - name: restart ssh
+      become: true
+      command: service ssh restart

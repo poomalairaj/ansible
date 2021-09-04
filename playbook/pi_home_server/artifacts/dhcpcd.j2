@@ -1,0 +1,13 @@
+hostname
+clientid
+persistent
+option rapid_commit
+option domain_name_servers, domain_name, domain_search, host_name
+option classless_static_routes
+option interface_mtu
+require dhcp_server_identifier
+slaac private
+interface {{ dhcpcd_interface }}
+static ip_address={{ dhcpcd_ip_address }}
+static routers={{ dhcpcd_routers }}
+static domain_name_servers={{ dhcpcd_domain_name_servers }}

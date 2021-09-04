@@ -1,0 +1,2 @@
+[vm]
+mint ansible_user=mint ansible_ssh_private_key_file=./artifacts/mint.pem ansible_host=192.168.1.100
