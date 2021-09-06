@@ -30,7 +30,6 @@
       dest: /etc/hostname
       backup: yes
     tags:
-      - pi_config
       - hostname
 
   # -------------------  Configure hosts  ------------------- # 
@@ -44,7 +43,6 @@
         ff02::2		ip6-allrouters
       dest: /etc/hosts
     tags:
-      - pi_config
       - hosts
 
 
@@ -72,13 +70,13 @@
         - fish
         - docker-compose
     tags:
-      - install-pkgs
+      - install_pkgs
 
 # -------------------  Docker configuration  ------------------- # 
       
-  - name: Add pi to docker group
+  - name: Add mint to docker group
     become: true
-    shell: usermod -aG docker pi
+    shell: usermod -aG docker mint
     tags:
       - docker
 
@@ -124,7 +122,7 @@
     copy:
       dest: ~/.config/fish/config.fish
       content: |
-        set -g -x fish_greeting 'This raspberry pi is a property of Poomalairaj. Unauthorized access is prohibited'
+        set -g -x fish_greeting 'This machine is a property of Poomalairaj. Unauthorized access is prohibited'
     tags:
       - fish
 

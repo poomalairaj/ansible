@@ -1,0 +1,5 @@
+vars.yaml
+artifacts/*.pem
+artifacts/*.pem.pub
+*.retry
+hosts
