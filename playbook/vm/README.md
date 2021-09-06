@@ -24,6 +24,6 @@ mint ALL=(ALL) NOPASSWD: ALL
 * Run the playbook
 
 ```
-cd ansible/playbook/pi_thinclient
-ansible-playbook pi_thinclient.yaml
+cd ansible/playbook/vm
+ansible-playbook vm.yaml
 ```
