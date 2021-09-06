@@ -69,6 +69,8 @@
         - encfs
         - fish
         - docker-compose
+        - keepassxc
+        - git
     tags:
       - install_pkgs
 
