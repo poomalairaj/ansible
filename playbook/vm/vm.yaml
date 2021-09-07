@@ -71,6 +71,7 @@
         - docker-compose
         - keepassxc
         - git
+        - xdotool
     tags:
       - install_pkgs
 
