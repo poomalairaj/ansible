@@ -72,6 +72,7 @@
         - keepassxc
         - git
         - xdotool
+        - gnucash
     tags:
       - install_pkgs
 
@@ -128,6 +129,48 @@
         set -g -x fish_greeting 'This machine is a property of Poomalairaj. Unauthorized access is prohibited'
     tags:
       - fish
+
+
+  # ------------------- Link to dotfiles ------------------- # 
+  - name: Create symbolic link to .gitconfig
+    file:
+      src: "{{dotfiles_dir}}/.gitconfig"
+      dest: "~/.gitconfig"
+      state: link
+    tags:
+      - dotfiles
+      - gitconfig    
+
+  - name: Create symbolic link to .vimrc
+    file:
+      src: "{{dotfiles_dir}}/.vimrc"
+      dest: "~/.vimrc"
+      state: link
+    tags:
+      - dotfiles
+      - vimrc        
+
+  - name: Create symbolic link to .gnucash
+    file:
+      src: "{{dotfiles_dir}}/gnucash"
+      dest: "~/.local/share/gnucash"
+      state: link
+    tags:
+      - dotfiles
+      - gnucash
+
+  - name: Create symbolic link to fish_history
+    file:
+      src: "{{dotfiles_dir}}/fish_history"
+      dest: "~/.local/share/fish/fish_history"
+      state: link
+    tags:
+      - dotfiles
+      - fish_history
+
+
+
+
 
   # ------------------- Handlers ------------------- # 
   handlers:

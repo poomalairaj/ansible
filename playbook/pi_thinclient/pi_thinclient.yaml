@@ -70,6 +70,7 @@
         - vlc
         - keepassxc
         - remmina
+        - kodi 
 
     tags:
       - install_pkgs
